@@ -1,4 +1,6 @@
 # WaveICA
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/r-recetox-waveica/README.html)
+
 Removal of batch effects for large-scale untargeted metabolomics data based on wavelet analysis.
 The WaveICA R package provides a new algorithm to removing batch effects for metabolomics data. The details of this
 method are in the papers "[WaveICA: a novel algorithm to remove batch effects for large-scale untargeted metabolomics
