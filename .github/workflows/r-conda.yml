@@ -46,7 +46,7 @@ jobs:
           cd tests/testthat/
           mkdir test-data
           cd test-data
-          xargs -n 1 curl -O < $GITHUB_WORKSPACE/tests/remote-files/fetch_input_data.txt
+          xargs -n 1 curl -O < ${{GITHUB_WORKSPACE}}/tests/remote-files/fetch_input_data.txt
       - name: Fetch batchwise waveica results
         run: |
           cd tests/testthat/test-data/
