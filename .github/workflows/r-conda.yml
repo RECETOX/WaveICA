@@ -43,22 +43,22 @@ jobs:
           conda env list
       - name: Fetch input data
         run: |
-          cd 'tests/testthat/'
+          cd tests/testthat/
           mkdir test-data
-          cd 'test-data'
-          xargs -n 1 curl -O < ../../remote-files/fetch_input_data.txt
+          cd test-data'
+          xargs -n 1 curl -O < '../../remote-files/fetch_input_data.txt'
       - name: Fetch batchwise waveica results
         run: |
-          cd 'tests/testthat/test-data/'
+          cd tests/testthat/test-data/
           mkdir batchwise-correction
-          cd 'batchwise-correction'
-          xargs -n 1 curl -O < ../../../remote-files/fetch_waveica_batchwise.txt
+          cd batchwise-correction
+          xargs -n 1 curl -O < '../../../remote-files/fetch_waveica_batchwise.txt'
       - name: Fetch nonbatchwise waveica results
         run: |
-          cd 'tests/testthat/test-data/'
+          cd tests/testthat/test-data/
           mkdir nonbatchwise-correction
-          cd 'nonbatchwise-correction'
-          xargs -n 1 curl -O < ../../../remote-files/fetch_waveica_nonbatchwise.txt
+          cd nonbatchwise-correction
+          xargs -n 1 curl -O < '../../../remote-files/fetch_waveica_nonbatchwise.txt'
       - name: Run devtools::check()
         run: |
           conda activate recetox-waveica-dev
