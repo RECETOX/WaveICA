@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false      
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -43,21 +43,21 @@ jobs:
           conda env list
       - name: Fetch input data
         run: |
-          cd tests/testthat
+          cd 'tests/testthat/'
           mkdir test-data
-          cd test-data
+          cd 'test-data'
           xargs -n 1 curl -O < ../../remote-files/fetch_input_data.txt
       - name: Fetch batchwise waveica results
         run: |
-          cd tests/testthat/test-data/
+          cd 'tests/testthat/test-data/'
           mkdir batchwise-correction
-          cd batchwise-correction
+          cd 'batchwise-correction'
           xargs -n 1 curl -O < ../../../remote-files/fetch_waveica_batchwise.txt
       - name: Fetch nonbatchwise waveica results
         run: |
-          cd tests/testthat/test-data/
+          cd 'tests/testthat/test-data/'
           mkdir nonbatchwise-correction
-          cd nonbatchwise-correction
+          cd 'nonbatchwise-correction'
           xargs -n 1 curl -O < ../../../remote-files/fetch_waveica_nonbatchwise.txt
       - name: Run devtools::check()
         run: |
