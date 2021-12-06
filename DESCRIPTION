@@ -2,11 +2,12 @@ Package: recetox.waveica
 Type: Package
 Title: recetox.waveica
 Version: 0.2.0
+Author: Kui Deng and Kang Li
+Maintainer: RECETOX <GalaxyToolsDevelopmentandDeployment@space.muni.cz>
 Authors@R: c(
  person("Kui", "Deng", email="dengkui_stat@163.com", role="aut"),
  person("Kang", "Li", role="aut"),
  person("RECETOX", email = "GalaxyToolsDevelopmentandDeployment@space.muni.cz", role = "cre"))
-Maintainer: RECETOX <GalaxyToolsDevelopmentandDeployment@space.muni.cz>
 Description: Removal of batch effects for large-scale untargeted metabolomics data based on wavelet transform. This is a customized fork of the original WaveICA package that contains both WaveICA and WaveICA 2.0.
 License: MIT
 Encoding: UTF-8
@@ -18,4 +19,6 @@ Suggests:
     patrick,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+Depends: 
+    R (>= 3.5.0)
 RoxygenNote: 7.1.2
