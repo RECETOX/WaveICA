@@ -4,7 +4,7 @@ patrick::with_parameters_test_that(
     input_data_path <- file.path("test-data", test_input)
     input_data <- readRDS(input_data_path)
 
-    injection_order <- dplyr::select(input_data, injectionOrder)
+    injection_order <- as.integer(input_data$injectionOrder)
     input_data <- dplyr::select(input_data, -any_of(c("sampleName", "injectionOrder", "sampleType", "batch", "class")))
 
     actual <- waveica_nonbatchwise(
