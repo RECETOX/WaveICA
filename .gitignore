@@ -1,6 +1,12 @@
+#R
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
-waveica/.Rbuildignore
-waveica/waveica.Rproj
+..Rcheck
+
+#tests
+tests/testthat/test-data
+
+#vscode
+.vscode
