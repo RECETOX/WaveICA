@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false      
       matrix:
-        os: [windows-latest]
+        os: [ windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -30,6 +30,9 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      - name: Install wget
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: choco install wget
 
       - name: Create conda environment
         uses: conda-incubator/setup-miniconda@v2
@@ -42,23 +45,11 @@ jobs:
           conda init bash
           conda env list
       - name: Fetch input data
-        run: |
-          cd tests/testthat/
-          mkdir test-data
-          cd test-data'
-          xargs -n 1 curl -O < '../../remote-files/fetch_input_data.txt'
+        run: wget -P tests/testthat/test-data -i tests/remote-files/fetch_input_data.txt
       - name: Fetch batchwise waveica results
-        run: |
-          cd tests/testthat/test-data/
-          mkdir batchwise-correction
-          cd batchwise-correction
-          xargs -n 1 curl -O < '../../../remote-files/fetch_waveica_batchwise.txt'
+        run: wget -P tests/testthat/test-data/batchwise-correction -i tests/remote-files/fetch_waveica_batchwise.txt
       - name: Fetch nonbatchwise waveica results
-        run: |
-          cd tests/testthat/test-data/
-          mkdir nonbatchwise-correction
-          cd nonbatchwise-correction
-          xargs -n 1 curl -O < '../../../remote-files/fetch_waveica_nonbatchwise.txt'
+        run: wget -P tests/testthat/test-data/nonbatchwise-correction -i tests/remote-files/fetch_waveica_nonbatchwise.txt
       - name: Run devtools::check()
         run: |
           conda activate recetox-waveica-dev
