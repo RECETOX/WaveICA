@@ -12,3 +12,4 @@ dependencies:
   - r-devtools
   - r-patrick
   - r-dplyr
+  - r-languageserver
