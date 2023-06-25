@@ -52,10 +52,7 @@ jobs:
         run: wget -P tests/testthat/test-data/nonbatchwise-correction -i tests/remote-files/fetch_waveica_nonbatchwise.txt
       - name: setup Rtools
         if: ${{ matrix.os == 'windows-latest' }}
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: '4.1.3'
-          windows-path-include-rtools: true
+        uses: r-windows/install-rtools@master
       - name: Run devtools::check()
         run: |
           conda activate recetox-waveica-dev
