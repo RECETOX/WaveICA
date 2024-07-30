@@ -1,131 +1,130 @@
-R2 <- function(poi, V, poiType, pval = T) {
-  #
-  #   R2(poi,V,poiType)
-  #
-  # Args:
-  # - V is a p*k matrix, where the rows corresponds to the samples
-  # - poi is a matrix p*l, representing the phenotypes of interest
-  # - poiType (1*l) is the types of poi: 'continuous' (then a linear
-  # regression is used) or 'categorical' (then the mean by class is used)
-  #
-  # Outputs:
-  # - R2(l), higher R^2 value between a column of V and poi(l)
-  # - idxCorr(l), index of the column of V giving the higher R^2 value (if many,
-  # takes the first one)
-  # - allR2(k,l),  R2 value for column k of V with poi l
-  #
-  #    IF pval =TRUE, return also:   #
-  # - pv(l) smaller p-value association between a column of V and poi(l)
-  # - idxcorr2(l) index of the column of V giving the smaller p-value (if many,
-  #                                                                          # takes the first one)
-  # - allpv(k,l),  p-value for column k of V with poi l
-  #
-  # if missing information in poi, remove the corresponding samples in the R2 computation
+linear_regression_estimation <- function(component_values, poi_values) {
+  coefs <- coef(lm(component_values ~ as.numeric(poi_values)))
+  estimated_values <- coefs[2] * as.numeric(poi_values) + coefs[1]
+  return(estimated_values)
+}
 
+class_mean_estimation <- function(component_values, poi_values) {
+  classes <- unique(poi_values)
+  estimated_values <- rep(NA, length(component_values))
+  for (class in classes) {
+    class_indices <- which(poi_values == class)
+    estimated_values[class_indices] <- mean(component_values[class_indices])
+  }
+  return(estimated_values)
+}
 
-  if (is.vector(V)) {
-    V <- matrix(V, ncol = 1)
+#' Compute R-squared and P-values between Phenotypes of Interest and Components
+#'
+#' This function computes the R-squared and optionally the p-values between phenotypes of interest (POI) and components.
+#'
+#' @param poi Matrix (p x l). Representing the phenotypes of interest.
+#' @param components Matrix (p x k). The components where the rows correspond to the samples.
+#' @param poi_types Character vector (length l). Types of POI: 'continuous' (for linear regression) or 'categorical' (for class mean).
+#' @param pval Logical. If TRUE, compute p-values in addition to R-squared values. Default is TRUE.
+#' @return A list containing:
+#' \item{R2}{Vector (length l). Highest R-squared value between a column of `components` and each POI.}
+#' \item{idxCorr}{Vector (length l). Index of the column of `components` giving the highest R-squared value.}
+#' \item{allR2}{Matrix (k x l). R-squared values for each column of `components` with each POI.}
+#' \item{pv}{Vector (length l). Smallest p-value association between a column of `components` and each POI (if `pval` is TRUE).}
+#' \item{idxCorr2}{Vector (length l). Index of the column of `components` giving the smallest p-value (if `pval` is TRUE).}
+#' \item{allpv}{Matrix (k x l). P-values for each column of `components` with each POI (if `pval` is TRUE).}
+#' @export
+R2 <- function(poi, components, poi_types, pval = TRUE) {
+  if (is.vector(components)) {
+    components <- matrix(components, ncol = 1)
   }
   if (is.vector(poi)) {
     poi <- matrix(poi, nrow = length(poi))
   }
 
-  p <- nrow(V) # number of samples
-  k <- ncol(V) # number of components
-  l <- length(poiType) # number of cf/poi to test
-  if (is.null(l)) {
-    stop("POI type(s) neeeded")
-  }
-  p2 <- nrow(poi)
-  l2 <- ncol(poi)
+  n_samples <- nrow(components)
+  n_components <- ncol(components)
+  n_poi <- length(poi_types)
 
-  if (l2 != l) { # checking poi and poiType dimensions compatiblity
-    if (p2 == l) { # if poi is transposed (l*p)
+  if (is.null(n_poi)) {
+    stop("POI type(s) needed")
+  }
+
+  poi_rows <- nrow(poi)
+  poi_cols <- ncol(poi)
+
+  if (poi_cols != n_poi) {
+    if (poi_rows == n_poi) {
       poi <- t(poi)
-      warning("Transposing poi to match poiType dimension")
-      p2 <- nrow(poi)
+      warning("Transposing POI to match POI types dimension")
+      poi_rows <- nrow(poi)
     } else {
-      print(poi)
-      print(poiType)
-      stop("poi dimensions doesn't match poiType dimension")
+      stop("POI dimensions do not match POI types dimension")
     }
   }
 
-
-  if (p != p2) { # checking poi and V dimensions compatiblity
-    if (p2 == k) {
-      warnings("Transposing V to match poi dimension")
-      V <- t(V)
-      k <- p
-      p <- p2
+  if (n_samples != poi_rows) {
+    if (poi_rows == n_components) {
+      warning("Transposing components to match POI dimension")
+      components <- t(components)
+      n_components <- n_samples
+      n_samples <- poi_rows
     } else {
-      stop("poi and V dimensions incompatible")
+      stop("POI and components dimensions incompatible")
     }
   }
 
-
-
-
-
-
-  R2 <- rep(-1, l)
-  names(R2) <- colnames(poi)
-  idxcorr <- R2
-  R2_tmp <- matrix(rep(-1, k * l), k, l, dimnames = list(colnames(V), colnames(poi))) # r2_tmp(k,l) hold the R2 value for column k of V with poi l
+  R2_values <- rep(-1, n_poi)
+  names(R2_values) <- colnames(poi)
+  idx_corr <- R2_values
+  R2_tmp <- matrix(rep(-1, n_components * n_poi), n_components, n_poi, dimnames = list(colnames(components), colnames(poi)))
 
   if (pval) {
-    pv <- R2
-    idxcorr2 <- R2
-    pv_tmp <- R2_tmp # r2_tmp(k,l) hold the R2 value for column k of V with poi l
+    p_values <- R2_values
+    idx_corr2 <- R2_values
+    p_values_tmp <- R2_tmp
   }
 
-  for (cmpt in 1:k) { # for each column of V
-    cmpt2an <- V[, cmpt]
-    for (ipoi in 1:l) {
-      idx_finite <- is.finite(as.factor(poi[, ipoi]))
-      poi2an <- poi[idx_finite, ipoi]
-      cmpt2an_finite <- cmpt2an[idx_finite]
-      if (poiType[ipoi] == "continuous") { # estimation by linear regression
-        coefs <- coef(lm(cmpt2an_finite ~ as.numeric(poi2an)))
-        cmpt2an_est <- coefs[2] * as.numeric(poi2an) + coefs[1]
-        nc <- 2
-      } else if (poiType[ipoi] == "categorical") { # estimation by classe mean
-        classes <- unique(poi2an)
-        nc <- length(classes)
-        cmpt2an_est <- rep(NA, length(cmpt2an_finite))
-        for (icl in 1:length(classes)) {
-          idxClasse <- which(poi2an == classes[icl])
-          cmpt2an_est[idxClasse] <- mean(cmpt2an_finite[idxClasse])
-        }
+  for (component_idx in 1:n_components) {
+    component_values <- components[, component_idx]
+    for (poi_idx in 1:n_poi) {
+      finite_indices <- is.finite(as.factor(poi[, poi_idx]))
+      poi_values <- poi[finite_indices, poi_idx]
+      finite_component_values <- component_values[finite_indices]
+
+      if (poi_types[poi_idx] == "continuous") {
+        estimated_values <- linear_regression_estimation(finite_component_values, poi_values)
+        num_classes <- 2
+      } else if (poi_types[poi_idx] == "categorical") {
+        estimated_values <- class_mean_estimation(finite_component_values, poi_values)
+        num_classes <- length(unique(poi_values))
       } else {
-        stop("Incorrect poiType. Select 'continuous' or 'categorical'. ")
+        stop("Incorrect poi_type. Select 'continuous' or 'categorical'.")
       }
-      sse <- sum((cmpt2an_finite - cmpt2an_est)^2)
-      sst <- sum((cmpt2an_finite - mean(cmpt2an_finite))^2)
-      R2_tmp[cmpt, ipoi] <- 1 - sse / sst
+
+      sse <- sum((finite_component_values - estimated_values)^2)
+      sst <- sum((finite_component_values - mean(finite_component_values))^2)
+      R2_tmp[component_idx, poi_idx] <- 1 - sse / sst
+
       if (pval) {
-        F <- ((sst - sse) / (nc - 1)) / (sse / (p - nc))
-        pv_tmp[cmpt, ipoi] <- 1 - pf(F, nc - 1, p - nc)
-        if (!is.finite(pv_tmp[cmpt, ipoi])) {
-          warning(paste("Non finite p-value for component ", cmpt, " (pv=", pv_tmp[cmpt, ipoi], ", F=", F, "), assigning NA", sep = ""))
-          pv_tmp[cmpt, ipoi] <- NA
+        F_value <- ((sst - sse) / (num_classes - 1)) / (sse / (n_samples - num_classes))
+        p_values_tmp[component_idx, poi_idx] <- 1 - pf(F_value, num_classes - 1, n_samples - num_classes)
+        if (!is.finite(p_values_tmp[component_idx, poi_idx])) {
+          warning(sprintf("Non-finite p-value for component %d (pv=%g, F=%g), assigning NA", component_idx, p_values_tmp[component_idx, poi_idx], F_value))
+          p_values_tmp[component_idx, poi_idx] <- NA
         }
       }
     }
   }
 
-  for (ipoi in 1:l) {
+  for (poi_idx in 1:n_poi) {
     if (pval) {
-      pv[ipoi] <- min(pv_tmp[, ipoi])
-      idxcorr2[ipoi] <- which(pv_tmp[, ipoi] == pv[ipoi])[1] # if more than one component gives the best R2, takes the first one
+      p_values[poi_idx] <- min(p_values_tmp[, poi_idx])
+      idx_corr2[poi_idx] <- which(p_values_tmp[, poi_idx] == p_values[poi_idx])[1]
     }
-    R2[ipoi] <- max(R2_tmp[, ipoi])
-    idxcorr[ipoi] <- which(R2_tmp[, ipoi] == R2[ipoi])[1] # if more than one component gives the best R2, takes the first one
+    R2_values[poi_idx] <- max(R2_tmp[, poi_idx])
+    idx_corr[poi_idx] <- which(R2_tmp[, poi_idx] == R2_values[poi_idx])[1]
   }
 
   if (pval) {
-    return(list(R2 = R2, idxcorr = idxcorr, allR2 = R2_tmp, pv = pv, idxcorr2 = idxcorr2, allpv = pv_tmp))
+    return(list(R2 = R2_values, idxCorr = idx_corr, allR2 = R2_tmp, pv = p_values, idxCorr2 = idx_corr2, allpv = p_values_tmp))
   } else {
-    return(list(R2 = R2, idxcorr = idxcorr, allR2 = R2_tmp))
+    return(list(R2 = R2_values, idxCorr = idx_corr, allR2 = R2_tmp))
   }
 }

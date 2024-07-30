@@ -14,8 +14,8 @@ patrick::with_parameters_test_that(
       group = group,
       batch = batch,
       K = 20,
-      t = 0.05,
-      t2 = 0.05,
+      batch_threshold = 0.05,
+      group_threshold = 0.05,
       alpha = 0
     )
 

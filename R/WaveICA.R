@@ -107,10 +107,10 @@ waveica_nonbatchwise <- function(data, wf = "haar", injection_order, alpha = 0, 
 #' @param wf String. Wavelet function, the default is "haar".
 #' @param batch Vector. Batch number of each sample.
 #' @param factorization String. Matrix factorization method, options are ["stICA", "SVD"]. The default is "stICA".
-#' @param group Vector, optional. Type of a sample (blank, sample, QC) numerically encoded to blank:0, sample:1, QC:2.
+#' @param group Vector, optional. Type of a sample (blank, sample, QC, standard) numerically encoded to blank:0, sample:1, QC:2, standard:3.
 #' @param K Integer. The maximal number of independent components (for ICA) or singular vectors (SVD). The default is 20.
-#' @param t Float between 0 and 1. The threshold to consider a component associate with the batch. The default is 0.05.
-#' @param t2 Float between 0 and 1. The threshold to consider a component associate with the group. The default is 0.05.
+#' @param batch_threshold Float between 0 and 1. The threshold to consider a component associate with the batch. The default is 0.05.
+#' @param group_threshold Float between 0 and 1. The threshold to consider a component associate with the group. The default is 0.05.
 #' @param alpha Float between 0 and 1. The trade-off value between the independence of samples and those
 #' of variables. The default is 0.
 #' @return Dataframe. Feature table with intensities corrected of batch effects.
@@ -121,8 +121,8 @@ waveica <- function(data,
                     factorization = "stICA",
                     group = NULL,
                     K = 20,
-                    t = 0.05,
-                    t2 = 0.05,
+                    batch_threshold = 0.05,
+                    group_threshold = 0.05,
                     alpha = 0) {
   if (!factorization %in% c("stICA", "SVD")) {
     stop("The factorization method should be 'stICA' or 'SVD'.")
@@ -137,8 +137,8 @@ waveica <- function(data,
   cat(paste("Performing matrix factorization...\n"))
   for (i in (1:index)) {
     data_coef <- coef[[i]]
-    data_coef_ICA <- normFact(fact = factorization, X = t(data_coef), ref = batch, refType = "categorical", k = K, t = t, ref2 = group, refType2 = "categorical", t2 = t2, alpha)
-    data_wave_ICA[[i]] <- t(data_coef_ICA$Xn)
+    data_coef_ICA <- normFact(factorization_method = factorization, data_matrix = t(data_coef), batch_vector = batch, batch_type = "categorical", rank = K, batch_threshold = batch_threshold, group_matrix = group, group_types = "categorical", group_threshold = group_threshold, alpha)
+    data_wave_ICA[[i]] <- t(data_coef_ICA$normalized_matrix)
   }
   data_wave <- wt_reconstruction(data, data_wave_ICA, wf)
 
