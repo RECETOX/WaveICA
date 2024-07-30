@@ -35,7 +35,7 @@ jobs:
         run: choco install wget
 
       - name: Create conda environment
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: recetox-waveica-dev
           auto-update-conda: true
