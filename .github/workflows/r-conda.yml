@@ -32,12 +32,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install wget
         if: ${{ matrix.os == 'windows-latest' }}
-        run: choco install wget        
+        run: choco install wget
+      - name: Sets env vars for osx-64
+        run: echo "CONDA_SUBDIR=osx-64" >> $GITHUB_ENV
+        if: ${{ matrix.os == 'macos-14' }}
       - name: Create conda environment
         uses: conda-incubator/setup-miniconda@v3
-        if: ${{ matrix.os == 'macos-14' }}
-        env:
-          CONDA_SUBDIR: osx-64
         with:
           activate-environment: recetox-waveica-dev
           auto-update-conda: true
@@ -47,11 +47,10 @@ jobs:
           conda init bash
           conda env list
       - name: Fetch input data
-        run: wget -P tests/testthat/test-data -i tests/remote-files/fetch_input_data.txt
-      - name: Fetch batchwise waveica results
-        run: wget -P tests/testthat/test-data/batchwise-correction -i tests/remote-files/fetch_waveica_batchwise.txt
-      - name: Fetch nonbatchwise waveica results
-        run: wget -P tests/testthat/test-data/nonbatchwise-correction -i tests/remote-files/fetch_waveica_nonbatchwise.txt
+        run: | 
+          wget -P tests/testthat/test-data -i tests/remote-files/fetch_input_data.txt
+          wget -P tests/testthat/test-data/batchwise-correction -i tests/remote-files/fetch_waveica_batchwise.txt
+          wget -P tests/testthat/test-data/nonbatchwise-correction -i tests/remote-files/fetch_waveica_nonbatchwise.txt
       - name: Run devtools::check()
         run: |
           conda activate recetox-waveica-dev
