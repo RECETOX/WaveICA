@@ -51,6 +51,9 @@ jobs:
           wget -P tests/testthat/test-data -i tests/remote-files/fetch_input_data.txt
           wget -P tests/testthat/test-data/batchwise-correction -i tests/remote-files/fetch_waveica_batchwise.txt
           wget -P tests/testthat/test-data/nonbatchwise-correction -i tests/remote-files/fetch_waveica_nonbatchwise.txt
+      - name: setup Rtools
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: r-windows/install-rtools@master
       - name: Run devtools::check()
         run: |
           conda activate recetox-waveica-dev
