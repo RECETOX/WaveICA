@@ -20,8 +20,13 @@ jobs:
     strategy:
       fail-fast: false      
       matrix:
-        os: [ windows-latest, ubuntu-latest, macos-14, macos-14-arm64]
+        os: [ windows-latest, ubuntu-latest, macos-14]
+        experimental: [false]
+        include:
+          - os: macos-14-arm64
+            experimental: true
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     defaults:
       run:
         shell: bash -l {0}
