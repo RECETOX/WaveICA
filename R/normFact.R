@@ -1,92 +1,120 @@
-normFact <- function(fact, X, ref, refType, k = 20, t = 0.5, ref2 = NULL, refType2 = NULL, t2 = 0.5, alpha, ...) {
-  #
-  #    Function to normalize data X by factorizing X=A*t(B) and removing components having a R2(ref) value higher than threshold t.
-  #    If ref2 is defined, the components with R2(ref2) higher than threshold t2 are kept.
-  #
-  #    Inputs:
-  #    - fact : factorization method, 'SVD' or 'stICA'
-  #    - X :(matrix n*p) samples*features matrix to normalize
-  #    - ref: (vector n) variable representing the information we want to remove from  X
-  #    - refType : type of ref, 'categorical' or 'continuous' to indicates which linear model to use (class means or linear regression)
-  #    - k: rank of the low-rank decomposition
-  #    - t: scalar in [0,1], if R2(cmpt, ref)>t the cmpt is removed from  X   to normalize
-  #    - ref2: (vector n*l) ref2[,i] represents the ith information we want to not remove from  X
-  #    - refType2: refType2[i] gives the type of  ref2[,i]  , 'categorical' or 'continuous' to indicates which linear model to use (class means or linear regression)
-  #    - t2: (vector 1*l)   scalar(s) in [0,1], if R2(cmpt,  ref2[,i]  )> t2[i]   the cmpt is kept in  X  , if  t2   is a scalar this threshold is considered for all  ref2[,i]
-  #    - ... values to pass to factorization method (typically, alpha value if facotorization by stICA)
-  #
-  #  Outputs:
-  #
-  #    - Xn : matrix n*p, normalized version of  X
-  #    - R2 : R2[k,l] gives the R2 between  B[k,]   and the ref l ( ref   or  ref2  )
-  #    - bestSV : components of  B   correlating with  ref   (but not with  ref2  ), removed from  X   to normalize
-  #    - A :  A in the matrix factorization X=A*t(B)
-  #    - B : B in the matrix factorization X=A*t(B)
-  #
-  #    Renard E., Branders S. and Absil P.-A.: Independent Component Analysis to Remove Batch Effects from Merged Microarray Datasets (WABI2016)
-
-
-
-
-
-  if (fact == "stICA") {
-    obj <- unbiased_stICA(X, k, alpha = alpha)
-    B <- obj$B
-    A <- obj$A
-  } else if (fact == "SVD") {
-    obj <- svd(X, nu = k, nv = k)
-    A <- obj$u %*% diag(obj$d[1:k], k)
-    B <- obj$v
+perform_factorization <- function(method, data_matrix, rank, alpha) {
+  if (method == "stICA") {
+    result <- unbiased_stICA(data_matrix, rank, alpha = alpha)
+  } else if (method == "SVD") {
+    result <- svd(data_matrix, nu = rank, nv = rank)
+    result$A <- result$u %*% diag(result$d[1:rank], rank)
+    result$B <- result$v
+  } else {
+    stop("Unsupported factorization method")
   }
+  return(result)
+}
 
-
-  factR2 <- R2(ref, B, refType, pval = T)
-
-  idx <- which(factR2$allpv < t)
-
-
-
-
-  if (t < 0 | t > 1) {
-    stop("t not in [0 1]")
+get_batch_indices <- function(batch_R2, threshold) {
+  if (threshold < 0 || threshold > 1) {
+    stop("batch_threshold not in [0, 1]")
   }
+  batch_indices <- which(batch_R2$allpv < threshold)
+  return(batch_indices)
+}
 
-  if (!is.null(ref2)) {
-    if (sum(t2 < 0 | t2 > 1)) {
-      stop("t2 not in [0 1]")
+get_group_indices <- function(group_R2, group_types, group_threshold) {
+  if (any(group_threshold < 0 | group_threshold > 1)) {
+    stop("group_threshold not in [0, 1]")
+  }
+  
+  group_indices <- integer(0)
+  
+  if (length(group_threshold) != length(group_types)) {
+    if (length(group_threshold) == 1) {
+      group_threshold <- rep(group_threshold, length(group_types))
+    } else {
+      stop("length(group_threshold) should be equal to 1 or length(group_types)")
     }
-    factR2_2 <- R2(ref2, B, refType2, pval = T)
-    idx_2 <- c()
-    if (length(t2) != length(refType2)) {
-      if (length(t2) == 1) {
-        t2 <- rep(t2, length(refType2))
-      } else {
-        stop("length(t2) sould be equal to 1 or length(refType2)")
-      }
-    }
-    for (i in 1:length(refType2)) {
-      idx_2 <- c(idx_2, which(factR2_2$allpv[, i] < t2[i]))
-    }
-
-
-    idx2keep <- intersect(idx, idx_2)
-    print(paste("Keeping", length(idx2keep), "cmpts with P value less than t2"))
-    idx <- setdiff(idx, idx2keep)
   }
 
-  bestcmptA <- A[, idx]
-  bestcmptB <- B[, idx]
-
-  print(paste("Removing", length(idx), "components with P value less than", t))
-
-
-  Xn <- X - bestcmptA %*% t(bestcmptB)
-
-
-  R2 <- factR2$allR2
-  if (!is.null(ref2)) {
-    R2 <- cbind(R2, factR2_2$allR2)
+  for (i in seq_along(group_types)) {
+    group_indices <- c(group_indices, which(group_R2$allpv[, i] < group_threshold[i]))
   }
 
-  return(list(Xn = Xn, R2 = R2, bestSV = bestcmptB, A = A, B = B))
+  return(group_indices)
+}
+
+remove_components <- function(data_matrix, factor_matrix_A, factor_matrix_B, batch_indices) {
+  components_to_remove_A <- factor_matrix_A[, batch_indices]
+  components_to_remove_B <- factor_matrix_B[, batch_indices]
+  print(paste("Removing", length(batch_indices), "components with P value less than batch_threshold"))
+  normalized_matrix <- data_matrix - components_to_remove_A %*% t(components_to_remove_B)
+  return(normalized_matrix)
+}
+
+combine_R2_results <- function(batch_R2, group_matrix, group_R2) {
+  combined_R2 <- batch_R2$allR2
+  if (!is.null(group_matrix)) {
+    combined_R2 <- cbind(combined_R2, group_R2$allR2)
+  }
+  return(combined_R2)
+}
+
+#' Normalize Data by Removing Batch Effects
+#'
+#' Function to normalize data matrix `X` by factorizing `X = A %*% t(B)` and removing components with a high R² value with respect to batch effects.
+#' Components with high R² values with respect to group effects are retained.
+#'
+#' @param factorization_method Character. The factorization method, either 'SVD' or 'stICA'.
+#' @param data_matrix Matrix (n x p). Samples x features matrix to normalize.
+#' @param batch_vector Vector (n). Variable representing the batch information to remove from `data_matrix`.
+#' @param batch_type Character. Type of `batch_vector`, either 'categorical' or 'continuous'.
+#' @param rank Integer. Rank of the low-rank decomposition. Default is 20.
+#' @param batch_threshold Numeric. Threshold in [0,1]; if R²(component, batch_vector) > batch_threshold, the component is removed. Default is 0.5.
+#' @param group_matrix Matrix (n x l), optional. Each column represents a group variable to retain in `data_matrix`.
+#' @param group_types Character vector. Each element corresponds to the type of `group_matrix` columns, either 'categorical' or 'continuous'.
+#' @param group_threshold Numeric vector. Threshold(s) in [0,1]; if R²(component, group_vector) > group_threshold[i], the component is retained. If scalar, this threshold applies to all group variables. Default is 0.5.
+#' @param alpha Numeric, optional. Parameter for `stICA` factorization.
+#' @return A list with the following components:
+#' \item{normalized_matrix}{Matrix (n x p). Normalized version of `data_matrix`.}
+#' \item{R2_matrix}{Matrix. R² values between `B` components and batch/group variables.}
+#' \item{removed_components}{Matrix. Components of `B` correlating with `batch_vector` but not with `group_matrix`, removed from `data_matrix`.}
+#' \item{factor_matrix_A}{Matrix. `A` in the matrix factorization `X = A %*% t(B)`.}
+#' \item{factor_matrix_B}{Matrix. `B` in the matrix factorization `X = A %*% t(B)`.}
+#' @references Renard E., Branders S., Absil P.-A.: Independent Component Analysis to Remove Batch Effects from Merged Microarray Datasets (WABI2016).
+normFact <- function(
+  factorization_method,
+  data_matrix,
+  batch_vector,
+  batch_type,
+  rank = 20,
+  batch_threshold = 0.5,
+  group_matrix = NULL,
+  group_types = NULL,
+  group_threshold = 0.5,
+  alpha = NULL
+) {
+  factorization_result <- perform_factorization(factorization_method, data_matrix, rank, alpha)
+  factor_matrix_A <- factorization_result$A
+  factor_matrix_B <- factorization_result$B
+
+  batch_R2 <- R2(batch_vector, factor_matrix_B, batch_type, pval = TRUE)
+  batch_indices <- get_batch_indices(batch_R2, batch_threshold)
+
+  if (!is.null(group_matrix)) {
+    group_R2 <- R2(group_matrix, factor_matrix_B, group_types, pval = TRUE)
+    group_indices <- get_group_indices(group_R2, group_types, group_threshold)
+    indices_to_keep <- intersect(batch_indices, group_indices)
+    print(paste("Keeping", length(indices_to_keep), "components with P value less than group_threshold"))
+    batch_indices <- setdiff(batch_indices, indices_to_keep)
+  }
+
+  normalized_matrix <- remove_components(data_matrix, factor_matrix_A, factor_matrix_B, batch_indices)
+
+  combined_R2 <- combine_R2_results(batch_R2, group_matrix, group_R2)
+
+  list(
+    normalized_matrix = normalized_matrix,
+    R2_matrix = combined_R2,
+    removed_components = factor_matrix_B[, batch_indices],
+    factor_matrix_A = factor_matrix_A,
+    factor_matrix_B = factor_matrix_B
+  )
 }

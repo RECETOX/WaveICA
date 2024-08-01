@@ -20,8 +20,13 @@ jobs:
     strategy:
       fail-fast: false      
       matrix:
-        os: [ windows-latest, ubuntu-latest, macos-latest]
+        os: [ windows-latest, ubuntu-latest, macos-14]
+        experimental: [false]
+        include:
+          - os: macos-14-arm64
+            experimental: true
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     defaults:
       run:
         shell: bash -l {0}
@@ -29,13 +34,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Install wget
         if: ${{ matrix.os == 'windows-latest' }}
         run: choco install wget
-
+      - name: Sets env vars for osx-64
+        run: echo "CONDA_SUBDIR=osx-64" >> $GITHUB_ENV
+        if: ${{ matrix.os == 'macos-14' }}
       - name: Create conda environment
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: recetox-waveica-dev
           auto-update-conda: true
@@ -45,11 +52,10 @@ jobs:
           conda init bash
           conda env list
       - name: Fetch input data
-        run: wget -P tests/testthat/test-data -i tests/remote-files/fetch_input_data.txt
-      - name: Fetch batchwise waveica results
-        run: wget -P tests/testthat/test-data/batchwise-correction -i tests/remote-files/fetch_waveica_batchwise.txt
-      - name: Fetch nonbatchwise waveica results
-        run: wget -P tests/testthat/test-data/nonbatchwise-correction -i tests/remote-files/fetch_waveica_nonbatchwise.txt
+        run: | 
+          wget -P tests/testthat/test-data -i tests/remote-files/fetch_input_data.txt
+          wget -P tests/testthat/test-data/batchwise-correction -i tests/remote-files/fetch_waveica_batchwise.txt
+          wget -P tests/testthat/test-data/nonbatchwise-correction -i tests/remote-files/fetch_waveica_nonbatchwise.txt
       - name: setup Rtools
         if: ${{ matrix.os == 'windows-latest' }}
         uses: r-windows/install-rtools@master
